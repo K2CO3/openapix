@@ -1,14 +1,12 @@
-//import { readFileSync } from 'fs';
 import { IntegrationProps, IntegrationType } from 'aws-cdk-lib/aws-apigateway';
 import { Construct } from 'constructs';
 import { Integration, IntegrationConfig, InternalIntegrationType, ValidatorConfig } from './base';
-//const template = readFileSync(__dirname+'/cors.vtl', 'utf-8');
 
 const template = `
 $input.json("$")
 #set($domains = [__DOMAINS__])
 #set($origin = $input.params("origin"))
-#if($domains.size()==0)
+#if($domains.size() == 1 && $domains[0] == "*")
 #set($context.responseOverride.header.Access-Control-Allow-Origin="*")
 #elseif($domains.contains($origin))
 #set($context.responseOverride.header.Access-Control-Allow-Origin="$origin")
@@ -56,12 +54,13 @@ export class CorsIntegration extends Integration {
     const integration: IntegrationProps = {
       type: IntegrationType.MOCK,
       options: {
+        requestTemplates: { 'application/json': '{"statusCode": 204}' },
         integrationResponses: [
           {
             statusCode: '204',
             responseParameters: {
-              'method.response.header.Access-Control-Allow-Methods': methods,
-              'method.response.header.Access-Control-Allow-Headers': headers,
+              'method.response.header.Access-Control-Allow-Methods': `'${methods}'`,
+              'method.response.header.Access-Control-Allow-Headers': `'${headers}'`,
             },
             responseTemplates: {
               'application/json': CorsIntegration.buildTemplate(origins),
